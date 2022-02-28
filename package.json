@@ -4,7 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "npx hardhat compile",
+    "format": "npx prettier '**/*.{json,sol,md}' --write",
+    "test": "npx hardhat test",
+    "deploy": "npx hardhat run scripts/deploy.ts",
+    "clean": "npx hardhat clean",
+    "check:format": "npx prettier '**/*.{json,sol,md}' --check"
   },
   "keywords": [],
   "author": "",
