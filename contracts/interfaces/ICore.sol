@@ -28,15 +28,7 @@ interface ICore {
   // Events
 
   event TicketCreate(
-    uint256 targetExecutionBlock,
-    uint256 creationBlock,
-    address tokenAddress,
-    address caller,
-    address from,
-    address to,
-    uint256 value,
-    uint256 fee,
-    uint32 nonce
+    Ticket ticket
   );
 
   event TicketFail(Ticket _ticket);

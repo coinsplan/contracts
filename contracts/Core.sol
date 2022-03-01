@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ICore.sol";
 import "./Guard.sol";
@@ -13,12 +14,6 @@ contract Core is ICore, Ownable {
   }
 
   // modifiers
-
-  modifier onlyAllow(address _from) {
-    require(allowance[_from][msg.sender] > 0, "Not allow");
-    _;
-  }
-
   modifier guard() {
     require(msg.sender == guardAddress);
     _;
@@ -31,7 +26,7 @@ contract Core is ICore, Ownable {
 
   mapping(bytes32 => Ticket) internal sig;
   mapping(address => uint32) public nonceOf;
-  mapping(address => mapping(address => uint64)) public allowance;
+  mapping(address => mapping(address => uint256)) public allowance;
 
   function _initGuard() private {
     address g;
@@ -91,28 +86,18 @@ contract Core is ICore, Ownable {
       bytes32(0),
       Node(false, false, 0, address(0))
     );
+
     bytes32 ticketHash = _calculateTicketHash(_newTicket);
+    _newTicket.ticketHash = ticketHash;
     sig[ticketHash] = _newTicket;
 
-    _newTicket.ticketHash = ticketHash;
-
-    emit TicketCreate(
-      _newTicket.targetExecutionBlock,
-      _newTicket.creationBlock,
-      _newTicket.tokenAddress,
-      _newTicket.caller,
-      _newTicket.from,
-      _newTicket.to,
-      _newTicket.value,
-      _newTicket.fee,
-      _newTicket.nonce
-    );
+    emit TicketCreate(_newTicket);
 
     return ticketHash;
   }
 
   function getTicket(bytes32 _ticketHash)
-    external
+    public
     view
     override
     returns (Ticket memory _ticket)
@@ -124,5 +109,19 @@ contract Core is ICore, Ownable {
     external
     guard
     returns (bool)
-  {}
+  {
+    Ticket memory targetTicket = getTicket(_ticketHash);
+    require(
+      IERC20(targetTicket.tokenAddress).allowance(
+        targetTicket.from,
+        address(this)
+      ) >= targetTicket.value,
+      "Not enough approval liquidity."
+    );
+    require(
+      IERC20(targetTicket.tokenAddress).balanceOf(targetTicket.from) >=
+        targetTicket.value,
+      "Not enough liquidity."
+    );
+  }
 }
