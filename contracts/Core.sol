@@ -24,9 +24,10 @@ contract Core is ICore, Ownable {
   address public cupaAddress;
   address public guardAddress;
 
-  mapping(bytes32 => Ticket) internal sig;
+  mapping(bytes32 => Ticket) internal t;
   mapping(address => uint32) public nonceOf;
   mapping(address => mapping(address => uint256)) public allowance;
+  mapping(address => Wallet) internal wallet;
 
   function _initGuard() private {
     address g;
@@ -70,6 +71,14 @@ contract Core is ICore, Ownable {
     uint256 _value,
     uint256 _fee
   ) external payable override returns (bytes32) {
+
+    // Transfer CUPA fees.
+    IERC20(cupaAddress).transferFrom(_from, address(this), _fee);
+    wallet[_from].fee += _fee;
+    // Keep eth and map to each wallet.
+    wallet[_from].gas += msg.value;
+
+    // Begin ticket creation
     uint32 thisNonce = nonceOf[_from];
     nonceOf[_from]++;
 
@@ -89,7 +98,7 @@ contract Core is ICore, Ownable {
 
     bytes32 ticketHash = _calculateTicketHash(_newTicket);
     _newTicket.ticketHash = ticketHash;
-    sig[ticketHash] = _newTicket;
+    t[ticketHash] = _newTicket;
 
     emit TicketCreate(_newTicket);
 
@@ -102,7 +111,7 @@ contract Core is ICore, Ownable {
     override
     returns (Ticket memory _ticket)
   {
-    return sig[_ticketHash];
+    return t[_ticketHash];
   }
 
   function coreExecution(bytes32 _ticketHash, address caller)
@@ -123,5 +132,7 @@ contract Core is ICore, Ownable {
         targetTicket.value,
       "Not enough liquidity."
     );
+
+
   }
 }

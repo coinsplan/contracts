@@ -25,6 +25,11 @@ interface ICore {
     Node node;
   }
 
+  struct Wallet {
+    uint256 fee;
+    uint256 gas;
+  }
+
   // Events
 
   event TicketCreate(
