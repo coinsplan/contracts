@@ -24,10 +24,10 @@ contract Core is ICore, Ownable {
   address public cupaAddress;
   address public guardAddress;
 
-  mapping(bytes32 => Ticket) internal t;
+  mapping(bytes32 => Ticket) private t;
   mapping(address => uint32) public nonceOf;
   mapping(address => mapping(address => uint256)) public allowance;
-  mapping(address => Wallet) internal wallet;
+  mapping(address => uint256) internal gas;
 
   function _initGuard() private {
     address g;
@@ -53,7 +53,7 @@ contract Core is ICore, Ownable {
         _ticket.targetExecutionBlock,
         _ticket.creationBlock,
         _ticket.tokenAddress,
-        _ticket.caller,
+        _ticket.sender,
         _ticket.from,
         _ticket.to,
         _ticket.value,
@@ -71,12 +71,11 @@ contract Core is ICore, Ownable {
     uint256 _value,
     uint256 _fee
   ) external payable override returns (bytes32) {
-
     // Transfer CUPA fees.
-    IERC20(cupaAddress).transferFrom(_from, address(this), _fee);
-    wallet[_from].fee += _fee;
+    IERC20(cupaAddress).transferFrom(msg.sender, address(this), _fee);
+
     // Keep eth and map to each wallet.
-    wallet[_from].gas += msg.value;
+    gas[msg.sender] += msg.value;
 
     // Begin ticket creation
     uint32 thisNonce = nonceOf[_from];
@@ -93,12 +92,14 @@ contract Core is ICore, Ownable {
       _fee,
       thisNonce,
       bytes32(0),
-      Node(false, false, 0, address(0))
+      TicketMetadata(true, address(0), false, false, 0, address(0))
     );
 
     bytes32 ticketHash = _calculateTicketHash(_newTicket);
     _newTicket.ticketHash = ticketHash;
     t[ticketHash] = _newTicket;
+
+    gas[_newTicket.sender] = msg.value;
 
     emit TicketCreate(_newTicket);
 
@@ -114,8 +115,9 @@ contract Core is ICore, Ownable {
     return t[_ticketHash];
   }
 
-  function coreExecution(bytes32 _ticketHash, address caller)
+  function coreExecutionCall(bytes32 _ticketHash, address payable caller)
     external
+    override
     guard
     returns (bool)
   {
@@ -133,6 +135,80 @@ contract Core is ICore, Ownable {
       "Not enough liquidity."
     );
 
+    return _execute(targetTicket, caller);
+  }
 
+  function _execute(Ticket memory _ticket, address payable caller)
+    private
+    returns (bool)
+  {
+    require(
+      _ticket.metadata.isActive == true && _ticket.metadata.isExecuted == false,
+      "Already executed or canceled."
+    );
+    // Gas calculation starts here.
+    uint256 startGas = gasleft();
+    IERC20(_ticket.tokenAddress).transferFrom(
+      _ticket.from,
+      _ticket.to,
+      _ticket.value
+    );
+
+    // Transfer CUPA fee to caller
+    IERC20(cupaAddress).transferFrom(address(this), caller, _ticket.fee);
+
+    uint256 endedGas = gasleft();
+    uint256 usedGas = startGas - endedGas;
+
+    // Transfer gas to caller
+    gas[_ticket.sender] -= usedGas;
+
+    t[_ticket.ticketHash].metadata.isActive = false;
+    t[_ticket.ticketHash].metadata.isExecuted = true;
+    t[_ticket.ticketHash].metadata.isSuccess = true;
+    t[_ticket.ticketHash].metadata.executionBlock = block.number;
+    t[_ticket.ticketHash].metadata.caller = caller;
+
+    caller.transfer(usedGas * tx.gasprice);
+
+    payable(_ticket.sender).transfer(gas[_ticket.sender]);
+
+    emit TicketExecuted(_ticket);
+
+    return true;
+  }
+
+  function cancel(bytes32 ticketHash) external override returns (bool) {
+    Ticket memory _ticket = getTicket(ticketHash);
+    require(
+      msg.sender == _ticket.from || msg.sender == _ticket.sender,
+      "Not allowed"
+    );
+    require(_ticket.metadata.isExecuted == false, "Ticket is already executed");
+    require(_ticket.metadata.isActive == true, "Ticket is canceled");
+
+    return _cancel(ticketHash);
+  }
+
+  function _cancel(bytes32 ticketHash) private returns (bool) {
+    t[ticketHash].metadata.isActive = false;
+    emit TicketCancel(t[ticketHash]);
+    return true;
+  }
+
+  function isActive(bytes32 ticketHash) public view returns (bool) {
+    return t[ticketHash].metadata.isActive;
+  }
+
+  function isExecuted(bytes32 ticketHash) public view returns (bool) {
+    return t[ticketHash].metadata.isExecuted;
+  }
+
+  function getTicketMetadata(bytes32 ticketHash)
+    public
+    view
+    returns (TicketMetadata memory)
+  {
+    return t[ticketHash].metadata;
   }
 }

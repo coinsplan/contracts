@@ -4,7 +4,9 @@ pragma solidity ^0.8.2;
 interface ICore {
   // Structures
 
-  struct Node {
+  struct TicketMetadata {
+    bool isActive;
+    address cancelBy;
     bool isExecuted;
     bool isSuccess;
     uint256 executionBlock;
@@ -15,28 +17,25 @@ interface ICore {
     uint256 targetExecutionBlock;
     uint256 creationBlock;
     address tokenAddress;
-    address caller;
+    address sender;
     address from;
     address to;
     uint256 value;
     uint256 fee;
     uint32 nonce;
     bytes32 ticketHash;
-    Node node;
-  }
-
-  struct Wallet {
-    uint256 fee;
-    uint256 gas;
+    TicketMetadata metadata;
   }
 
   // Events
 
-  event TicketCreate(
-    Ticket ticket
-  );
+  event TicketCreate(Ticket _ticket);
 
-  event TicketFail(Ticket _ticket);
+  // event TicketFail(Ticket _ticket);
+
+  event TicketCancel(Ticket _ticket);
+
+  event TicketExecuted(Ticket _ticket);
 
   function createTicket(
     uint256 targetExecutionBlock,
@@ -51,4 +50,10 @@ interface ICore {
     external
     view
     returns (Ticket memory _ticket);
+
+  function coreExecutionCall(bytes32 _ticketHash, address payable caller)
+    external
+    returns (bool);
+
+  function cancel(bytes32 ticketHash) external returns (bool);
 }

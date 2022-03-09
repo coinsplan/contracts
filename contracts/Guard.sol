@@ -19,8 +19,8 @@ contract Guard is IGuard {
     override
     returns (bool)
   {
-    ICore.Ticket memory ticket = ICore(_CORE).getTicket(_ticketHash);
-    return ticket.node.isExecuted;
+    ICore.Ticket memory _ticket = ICore(_CORE).getTicket(_ticketHash);
+    return _ticket.metadata.isExecuted;
   }
 
   function execute(bytes32 _ticketHash) external override returns (bool) {
@@ -29,5 +29,6 @@ contract Guard is IGuard {
       "This ticket hash been executed"
     );
     // send execution to core contract
+    return ICore(_CORE).coreExecutionCall(_ticketHash, payable(msg.sender));
   }
 }
