@@ -22,9 +22,14 @@ async function main() {
 
   // console.log("Greeter deployed to:", greeter.address);
 
-
   const Core = await ethers.getContractFactory("Core");
-  const core = await Core.deploy()
+  const CUPA = await ethers.getContractFactory("CUPA");
+
+  // Deploy CUPA token
+  const cupa = await CUPA.deploy();
+  const core = await Core.deploy(cupa.address);
+
+  
 }
 
 // We recommend this pattern to be able to use async/await everywhere
