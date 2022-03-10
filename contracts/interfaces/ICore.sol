@@ -21,6 +21,7 @@ interface ICore {
     address from;
     address to;
     uint256 value;
+    uint gas;
     uint256 fee;
     uint32 nonce;
     bytes32 ticketHash;

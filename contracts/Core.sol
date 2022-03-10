@@ -58,6 +58,7 @@ contract Core is ICore, Ownable {
         _ticket.to,
         _ticket.value,
         _ticket.fee,
+        _ticket.gas,
         _ticket.nonce
       )
     );
@@ -90,6 +91,7 @@ contract Core is ICore, Ownable {
       _to,
       _value,
       _fee,
+      msg.value,
       thisNonce,
       bytes32(0),
       TicketMetadata(true, address(0), false, false, 0, address(0))
@@ -192,6 +194,12 @@ contract Core is ICore, Ownable {
 
   function _cancel(bytes32 ticketHash) private returns (bool) {
     t[ticketHash].metadata.isActive = false;
+    Ticket memory _ticket = getTicket(ticketHash);
+    // Refunds
+    gas[_ticket.sender] -= _ticket.gas;
+    IERC20(cupaAddress).transfer(_ticket.sender, _ticket.value);
+    payable(_ticket.sender).transfer(_ticket.gas);
+    
     emit TicketCancel(t[ticketHash]);
     return true;
   }
