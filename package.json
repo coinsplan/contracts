@@ -4,12 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "node": "npx hardhat node",
     "compile": "npx hardhat compile",
     "format": "npx prettier '**/*.{json,sol,md}' --write",
     "test": "npx hardhat test",
     "deploy": "npx hardhat run scripts/deploy.ts",
+    "deploy-local": "npx hardhat run scripts/deploy.ts --network localhost",
     "clean": "npx hardhat clean",
-    "check:format": "npx prettier '**/*.{json,sol,md}' --check"
+    "check:format": "npx prettier '**/*.{json,sol,md}' --check",
+    "playground": "npx ts-node scripts/playground.ts"
   },
   "keywords": [],
   "author": "",

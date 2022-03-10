@@ -4,7 +4,7 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import { ethers } from "hardhat";
-import chalk from "chalk";
+
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
   // line interface.
@@ -22,15 +22,18 @@ async function main() {
 
   // console.log("Greeter deployed to:", greeter.address);
 
+  const cupaInitialSupply = ethers.utils.parseUnits("300000", 18);
+
   const Core = await ethers.getContractFactory("Core");
   const CUPA = await ethers.getContractFactory("CUPA");
 
   // Deploy CUPA token
-  console.log(chalk.yellowBright("Beginning contracts deployment..."));
-  const cupa = await CUPA.deploy();
+  const cupa = await CUPA.deploy(cupaInitialSupply);
   const core = await Core.deploy(cupa.address);
-  console.log(chalk.greenBright(`CUPA deployed at ${cupa.address}`));
-  console.log(chalk.greenBright(`Core deployed at ${core.address}`));
+
+  console.log(`Cupa  deployed to: ${cupa.address}`)
+  console.log(`Core  deployed to: ${core.address}`)  
+  console.log(`Guard deployed to: ${await core.guardAddress()}`)  
 }
 
 // We recommend this pattern to be able to use async/await everywhere

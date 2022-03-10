@@ -199,7 +199,7 @@ contract Core is ICore, Ownable {
     gas[_ticket.sender] -= _ticket.gas;
     IERC20(cupaAddress).transfer(_ticket.sender, _ticket.value);
     payable(_ticket.sender).transfer(_ticket.gas);
-    
+
     emit TicketCancel(t[ticketHash]);
     return true;
   }
